@@ -26,8 +26,7 @@ const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecogni
 const recognition = SpeechRecognition ? new SpeechRecognition() : null;
 
 if (recognition) {
-    // continuous = false tells the browser to stop automatically when silence is detected
-    recognition.continuous = false; 
+    recognition.continuous = false; // Auto-stop on silence
     recognition.interimResults = true;
     recognition.lang = 'en-US';
     micBtn.disabled = false;
@@ -37,14 +36,15 @@ if (recognition) {
 let isAiTalking = false;
 let isRecording = false;
 let finalTranscript = "";
+let interimTranscript = ""; // FIX: Made this global so onend can access it!
 
 // --- CLICK TO TALK (AUTO-DETECT END) ---
 micBtn.onclick = () => {
-    // Block clicks if AI is talking, hardware failed, or already recording
     if (isAiTalking || !recognition || isRecording) return;
     
     startTimer();
     finalTranscript = "";
+    interimTranscript = ""; // FIX: Reset on new recording
     isRecording = true;
     
     try {
@@ -59,20 +59,19 @@ micBtn.onclick = () => {
 };
 
 recognition.onresult = (event) => {
-    let interim = "";
+    interimTranscript = ""; // Reset local interim state for this chunk
     for (let i = event.resultIndex; i < event.results.length; ++i) {
         if (event.results[i].isFinal) {
             finalTranscript += event.results[i][0].transcript;
         } else {
-            interim += event.results[i][0].transcript;
+            interimTranscript += event.results[i][0].transcript;
         }
     }
-    statusText.innerText = `👂 Hearing: "${finalTranscript + interim}"`;
+    statusText.innerText = `👂 Hearing: "${finalTranscript + interimTranscript}"`;
 };
 
-// Fires automatically when the user stops speaking
 recognition.onend = () => {
-    if (!isRecording) return; // Prevent duplicate firing
+    if (!isRecording) return; 
     
     isRecording = false;
     micBtn.classList.remove('recording');
@@ -80,7 +79,9 @@ recognition.onend = () => {
     micBtn.innerHTML = '<span class="icon">⏳</span><span class="text">Processing...</span>';
     statusText.innerText = "⏳ Sending to Cue...";
 
-    const fullText = finalTranscript.trim();
+    // FIX: Combine both so nothing gets lost when the browser cuts off early!
+    const fullText = (finalTranscript + " " + interimTranscript).trim();
+    
     if (fullText.length > 0) {
         addMessage('Candidate', fullText);
         showTypingIndicator();
