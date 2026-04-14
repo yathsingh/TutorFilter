@@ -8,7 +8,6 @@ const chatWindow = document.getElementById('chat-window');
 const evalCard = document.getElementById('evaluation-result');
 const evalDisplay = document.getElementById('eval-display');
 
-// Timer Variables
 let startTime;
 let timerInterval;
 
@@ -23,7 +22,6 @@ function startTimer() {
     }, 1000);
 }
 
-// Initialize Browser Speech Recognition
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 const recognition = SpeechRecognition ? new SpeechRecognition() : null;
 
@@ -31,17 +29,13 @@ if (recognition) {
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
-    // FIX: Enable UI once hardware is ready
     micBtn.disabled = false;
     statusText.innerText = "✅ Ready for input.";
-} else {
-    statusText.innerText = "⚠ Browser doesn't support STT. Use Chrome.";
 }
 
 let isAiTalking = false;
 let finalTranscript = "";
 
-// --- PUSH-TO-TALK LOGIC ---
 micBtn.onmousedown = () => {
     if (isAiTalking || !recognition) return;
     startTimer();
@@ -57,16 +51,14 @@ micBtn.onmouseup = () => {
     if (!recognition) return;
     recognition.stop();
     micBtn.classList.remove('recording');
-    statusText.innerText = "⏳ Sending to Cue...";
+    statusText.innerText = "⏳ Processing...";
     micBtn.disabled = true;
 
     setTimeout(() => {
         if (finalTranscript.trim()) {
             addMessage('Candidate', finalTranscript);
             socket.emit('candidate_speech', { text: finalTranscript });
-        } else {
-            resetMicState();
-        }
+        } else { resetMicState(); }
     }, 500);
 };
 
@@ -81,7 +73,6 @@ if (recognition) {
     };
 }
 
-// --- HANDLING AI RESPONSE ---
 socket.on('ai_response', (data) => {
     isAiTalking = true;
     addMessage('Cue', data.text);
@@ -90,12 +81,9 @@ socket.on('ai_response', (data) => {
         statusText.innerText = "🔊 Cue is speaking...";
         audio.play();
         audio.onended = () => resetMicState();
-    } else {
-        resetMicState();
-    }
+    } else { resetMicState(); }
 });
 
-// --- END INTERVIEW LOGIC ---
 endBtn.onclick = () => {
     statusText.innerText = "📈 Finalizing evaluation...";
     clearInterval(timerInterval);
@@ -106,7 +94,6 @@ socket.on('evaluation_complete', (data) => {
     evalCard.classList.remove('hidden');
     evalDisplay.innerText = JSON.stringify(JSON.parse(data.result), null, 2);
     statusText.innerText = "✅ Interview Complete.";
-    micBtn.disabled = true;
 });
 
 function resetMicState() {

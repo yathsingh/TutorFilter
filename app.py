@@ -46,13 +46,13 @@ def handle_end():
     session = active_sessions.get(request.sid)
     if not session: return
 
-    # Build transcript from memory
     transcript = ""
+    # Correctly parse the new SDK history structure
     for turn in session.get_history()[2:]:
         role = "Cue" if turn["role"] == "model" else "Candidate"
-        transcript += f"{role}: {turn['parts'][0]['text']}\n\n"
+        text_content = turn["parts"][0]["text"]
+        transcript += f"{role}: {text_content}\n\n"
     
-    # Generate the JSON report
     report = evaluate_transcript(transcript)
     emit('evaluation_complete', {'result': report})
 

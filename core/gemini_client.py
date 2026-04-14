@@ -5,17 +5,11 @@ from google.genai import types
 from dotenv import load_dotenv
 
 load_dotenv()
-
-# Initialize the new client
 client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
 def get_gemini_response(history, current_prompt):
-    """
-    Uses the new SDK to get a response from Cue.
-    """
     try:
-        # Construct the conversation contents
-        # The new SDK takes contents as a list of dicts
+        # Construct the conversation contents by appending the current prompt
         contents = history + [{"role": "user", "parts": [{"text": current_prompt}]}]
         
         response = client.models.generate_content(
@@ -31,11 +25,7 @@ def get_gemini_response(history, current_prompt):
         return "I'm having a bit of trouble connecting."
 
 def evaluate_transcript(transcript_text):
-    """
-    Generates the structured JSON report using the new SDK.
-    """
     from core.prompts import EVALUATOR_PROMPT
-    
     full_prompt = f"{EVALUATOR_PROMPT}\n\nTRANSCRIPT:\n{transcript_text}"
     
     response = client.models.generate_content(
