@@ -2,27 +2,31 @@
 import os
 from google import genai
 from google.genai import types
+from core.prompts import SYSTEM_BASE
 from dotenv import load_dotenv
 
 load_dotenv()
 client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
-def get_gemini_response(history, current_prompt):
+def get_gemini_response(history, stage_instruction):
     try:
-        # Construct the conversation contents by appending the current prompt
-        contents = history + [{"role": "user", "parts": [{"text": current_prompt}]}]
+        # Use system_instruction to define the persona correctly without corrupting history
+        config = types.GenerateContentConfig(
+            system_instruction=SYSTEM_BASE + "\n\nCURRENT GOAL: " + stage_instruction
+        )
         
         response = client.models.generate_content(
             model='gemini-2.0-flash',
-            contents=contents
+            contents=history,
+            config=config
         )
         
         if response.text:
             return response.text.strip()
-        return "I'm sorry, could you repeat that?"
+        return "I'm sorry, I missed that. Could you say it again?"
     except Exception as e:
         print(f"[!] Gemini Error: {e}")
-        return "I'm having a bit of trouble connecting."
+        return "I'm having a bit of trouble connecting to my brain. One moment!"
 
 def evaluate_transcript(transcript_text):
     from core.prompts import EVALUATOR_PROMPT

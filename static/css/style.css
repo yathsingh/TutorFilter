@@ -69,7 +69,6 @@ header p { font-size: 0.9rem; color: #718096; }
     gap: 12px;
 }
 
-/* Push-to-Talk Button */
 .ptt-btn {
     flex: 2;
     background: var(--primary);
@@ -81,7 +80,7 @@ header p { font-size: 0.9rem; color: #718096; }
     font-weight: 700;
     cursor: pointer;
     transition: all 0.2s ease;
-    user-select: none; /* Prevents text selection while holding */
+    user-select: none;
 }
 
 .ptt-btn.recording {

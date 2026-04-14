@@ -26,7 +26,7 @@ const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecogni
 const recognition = SpeechRecognition ? new SpeechRecognition() : null;
 
 if (recognition) {
-    recognition.continuous = true;
+    recognition.continuous = true; // Prevents the browser from auto-stopping
     recognition.interimResults = true;
     recognition.lang = 'en-US';
     micBtn.disabled = false;
@@ -35,11 +35,13 @@ if (recognition) {
 
 let isAiTalking = false;
 let finalTranscript = "";
+let interimTranscript = "";
 
 micBtn.onmousedown = () => {
     if (isAiTalking || !recognition) return;
     startTimer();
     finalTranscript = "";
+    interimTranscript = "";
     try {
         recognition.start();
         micBtn.classList.add('recording');
@@ -54,24 +56,30 @@ micBtn.onmouseup = () => {
     statusText.innerText = "⏳ Processing...";
     micBtn.disabled = true;
 
+    // Wait 500ms for the browser to finish processing, then force send what we have
     setTimeout(() => {
-        if (finalTranscript.trim()) {
-            addMessage('Candidate', finalTranscript);
-            socket.emit('candidate_speech', { text: finalTranscript });
-        } else { resetMicState(); }
+        const fullText = (finalTranscript + " " + interimTranscript).trim();
+        if (fullText) {
+            addMessage('Candidate', fullText);
+            socket.emit('candidate_speech', { text: fullText });
+        } else {
+            console.warn("Speech recognition captured no text.");
+            resetMicState();
+        }
     }, 500);
 };
 
-if (recognition) {
-    recognition.onresult = (event) => {
-        let interim = "";
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-            if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript;
-            else interim += event.results[i][0].transcript;
+recognition.onresult = (event) => {
+    interimTranscript = ""; // Reset interim on every chunk
+    for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+        } else {
+            interimTranscript += event.results[i][0].transcript;
         }
-        statusText.innerText = `👂 Hearing: "${finalTranscript + interim}"`;
-    };
-}
+    }
+    statusText.innerText = `👂 Hearing: "${finalTranscript + interimTranscript}"`;
+};
 
 socket.on('ai_response', (data) => {
     isAiTalking = true;
@@ -81,7 +89,9 @@ socket.on('ai_response', (data) => {
         statusText.innerText = "🔊 Cue is speaking...";
         audio.play();
         audio.onended = () => resetMicState();
-    } else { resetMicState(); }
+    } else {
+        resetMicState();
+    }
 });
 
 endBtn.onclick = () => {
