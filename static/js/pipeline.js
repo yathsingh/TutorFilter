@@ -12,9 +12,18 @@ if (recognition) {
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
+
+    // FIX: Enable the UI immediately once hardware is confirmed
+    micBtn.disabled = false;
+    statusText.innerText = "✅ Ready for input.";
 } else {
     statusText.innerText = "⚠ Your browser does not support speech recognition. Use Chrome.";
 }
+
+// Socket connection feedback
+socket.on('connect', () => {
+    console.log("Connected to Cue server.");
+});
 
 let isAiTalking = false;
 let finalTranscript = "";
