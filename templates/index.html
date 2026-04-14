@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cue | AI Tutor Screener</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">🎓</div>
+            <div class="header-text">
+                <h1>Cue</h1>
+                <p>AI-Powered Tutor Screening</p>
+            </div>
+        </header>
+
+        <div id="status-bar" class="card">
+            <span id="status">🔄 Initializing hardware...</span>
+            <span id="timer">00:00</span>
+        </div>
+
+        <div id="controls" class="card">
+            <button id="mic-btn" class="ptt-btn" disabled>
+                <span class="icon">🎙️</span>
+                <span class="text">Hold to Speak</span>
+            </button>
+            <button id="end-btn" class="secondary-btn">⏹ End Interview</button>
+        </div>
+
+        <div id="chat-window" class="card">
+            <div class="message message-cue">
+                <span class="message-label">Cue</span>
+                <p>Welcome! I'm Cue. Please hold the button when you're ready to start the interview.</p>
+            </div>
+        </div>
+
+        <div id="evaluation-result" class="card hidden">
+            <h2>📋 Evaluation Report</h2>
+            <div id="eval-display">
+                </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/pipeline.js') }}"></script>
+</body>
+</html>
