@@ -2,6 +2,7 @@ import os
 import google.generativeai as genai
 from core.prompts import EVALUATOR_SYSTEM_PROMPT
 
+
 chat_model = genai.GenerativeModel('gemini-1.5-flash')
 eval_model = genai.GenerativeModel(
     'gemini-1.5-flash',
