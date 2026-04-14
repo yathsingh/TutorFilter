@@ -1,4 +1,3 @@
-# app.py
 import os
 from flask import Flask, render_template, request
 from flask_socketio import SocketIO, emit
@@ -9,7 +8,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+socketio = SocketIO(app, cors_allowed_origins="*")
+
 active_sessions = {}
 
 @app.route('/')
@@ -27,7 +27,6 @@ def handle_speech(data):
     print(f"\n[DEBUG] 🎤 Received speech: '{user_text}'")
     
     session = active_sessions.get(request.sid)
-    # Fallback: If SID changed due to polling reconnect, recover gracefully
     if not session: 
         print(f"[!] No session found for {request.sid}. Creating a new one.")
         session = ConversationManager()
@@ -37,19 +36,15 @@ def handle_speech(data):
         print("[!] Text was empty. Aborting AI generation.")
         return
 
-    # 1. Add user message
     session.add_message("user", user_text)
     
-    # 2. Get AI response
     print("[DEBUG] 🧠 Fetching Gemini response...")
     stage_note = session.get_stage_instruction()
     ai_text = get_gemini_response(session.get_history(), stage_note)
     print(f"[DEBUG] 🤖 Cue says: '{ai_text}'")
     
-    # 3. Add AI response
     session.add_message("model", ai_text)
 
-    # 4. Generate TTS
     audio_b64 = None
     try:
         print("[DEBUG] 🔊 Generating audio...")
@@ -77,5 +72,4 @@ def handle_end():
     print("[DEBUG] ✅ Report sent.")
 
 if __name__ == '__main__':
-    # Running on 0.0.0.0 ensures it binds correctly if your local network changes
     socketio.run(app, debug=True, host='0.0.0.0', port=5000)

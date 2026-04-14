@@ -1,4 +1,3 @@
-# core/gemini_client.py
 import os
 from google import genai
 from google.genai import types
@@ -10,7 +9,6 @@ client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
 def get_gemini_response(history, stage_instruction):
     try:
-        # Use system_instruction to define the persona correctly without corrupting history
         config = types.GenerateContentConfig(
             system_instruction=SYSTEM_BASE + "\n\nCURRENT GOAL: " + stage_instruction
         )

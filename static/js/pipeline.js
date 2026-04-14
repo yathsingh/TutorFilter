@@ -26,64 +26,96 @@ const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecogni
 const recognition = SpeechRecognition ? new SpeechRecognition() : null;
 
 if (recognition) {
-    recognition.continuous = true; // Prevents the browser from auto-stopping
+    // continuous = false tells the browser to stop automatically when silence is detected
+    recognition.continuous = false; 
     recognition.interimResults = true;
     recognition.lang = 'en-US';
     micBtn.disabled = false;
-    statusText.innerText = "✅ Ready for input.";
+    statusText.innerText = "✅ Ready. Click to speak.";
 }
 
 let isAiTalking = false;
+let isRecording = false;
 let finalTranscript = "";
-let interimTranscript = "";
 
-micBtn.onmousedown = () => {
-    if (isAiTalking || !recognition) return;
+// --- CLICK TO TALK (AUTO-DETECT END) ---
+micBtn.onclick = () => {
+    // Block clicks if AI is talking, hardware failed, or already recording
+    if (isAiTalking || !recognition || isRecording) return;
+    
     startTimer();
     finalTranscript = "";
-    interimTranscript = "";
+    isRecording = true;
+    
     try {
         recognition.start();
         micBtn.classList.add('recording');
-        statusText.innerText = "🎙️ Listening...";
-    } catch (e) { console.error(e); }
-};
-
-micBtn.onmouseup = () => {
-    if (!recognition) return;
-    recognition.stop();
-    micBtn.classList.remove('recording');
-    statusText.innerText = "⏳ Processing...";
-    micBtn.disabled = true;
-
-    // Wait 500ms for the browser to finish processing, then force send what we have
-    setTimeout(() => {
-        const fullText = (finalTranscript + " " + interimTranscript).trim();
-        if (fullText) {
-            addMessage('Candidate', fullText);
-            socket.emit('candidate_speech', { text: fullText });
-        } else {
-            console.warn("Speech recognition captured no text.");
-            resetMicState();
-        }
-    }, 500);
+        micBtn.innerHTML = '<span class="icon">🔴</span><span class="text">Listening...</span>';
+        statusText.innerText = "🎙️ Listening... Speak now.";
+    } catch (e) { 
+        console.error("Recognition error:", e);
+        isRecording = false; 
+    }
 };
 
 recognition.onresult = (event) => {
-    interimTranscript = ""; // Reset interim on every chunk
+    let interim = "";
     for (let i = event.resultIndex; i < event.results.length; ++i) {
         if (event.results[i].isFinal) {
             finalTranscript += event.results[i][0].transcript;
         } else {
-            interimTranscript += event.results[i][0].transcript;
+            interim += event.results[i][0].transcript;
         }
     }
-    statusText.innerText = `👂 Hearing: "${finalTranscript + interimTranscript}"`;
+    statusText.innerText = `👂 Hearing: "${finalTranscript + interim}"`;
 };
 
+// Fires automatically when the user stops speaking
+recognition.onend = () => {
+    if (!isRecording) return; // Prevent duplicate firing
+    
+    isRecording = false;
+    micBtn.classList.remove('recording');
+    micBtn.disabled = true;
+    micBtn.innerHTML = '<span class="icon">⏳</span><span class="text">Processing...</span>';
+    statusText.innerText = "⏳ Sending to Cue...";
+
+    const fullText = finalTranscript.trim();
+    if (fullText.length > 0) {
+        addMessage('Candidate', fullText);
+        showTypingIndicator();
+        socket.emit('candidate_speech', { text: fullText });
+    } else {
+        statusText.innerText = "⚠️ Didn't catch that. Click to try again.";
+        setTimeout(resetMicState, 2000);
+    }
+};
+
+// --- TYPING INDICATOR ---
+let typingDiv = null;
+
+function showTypingIndicator() {
+    if (typingDiv) return;
+    typingDiv = document.createElement('div');
+    typingDiv.className = 'typing-indicator';
+    typingDiv.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+    chatWindow.appendChild(typingDiv);
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+}
+
+function removeTypingIndicator() {
+    if (typingDiv) {
+        typingDiv.remove();
+        typingDiv = null;
+    }
+}
+
+// --- SERVER RESPONSES ---
 socket.on('ai_response', (data) => {
+    removeTypingIndicator();
     isAiTalking = true;
     addMessage('Cue', data.text);
+    
     if (data.audio) {
         const audio = new Audio("data:audio/mpeg;base64," + data.audio);
         statusText.innerText = "🔊 Cue is speaking...";
@@ -108,8 +140,10 @@ socket.on('evaluation_complete', (data) => {
 
 function resetMicState() {
     isAiTalking = false;
+    isRecording = false;
     micBtn.disabled = false;
-    micBtn.innerText = "🎙️ Hold to Speak";
+    micBtn.classList.remove('recording');
+    micBtn.innerHTML = '<span class="icon">🎙️</span><span class="text">Click to Speak</span>';
     statusText.innerText = "✅ Ready.";
 }
 
